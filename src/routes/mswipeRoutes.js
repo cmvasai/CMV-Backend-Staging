@@ -152,8 +152,10 @@ router.get('/info', mswipeController.getServiceInfo);
  * Helps verify if credentials are configured correctly
  * and if we can connect to Mswipe API
  * 
- * SECURITY: Remove or protect in production
+ * SECURITY: Only available in non-production environments
  */
-router.get('/debug/token', mswipeController.debugTestToken);
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/debug/token', mswipeController.debugTestToken);
+}
 
 module.exports = router;
