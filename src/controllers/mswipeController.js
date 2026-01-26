@@ -465,3 +465,46 @@ exports.getServiceInfo = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+/**
+ * Debug endpoint to test Mswipe token generation
+ * This helps verify if credentials are correct
+ * 
+ * GET /api/mswipe/debug/token
+ * 
+ * REMOVE IN PRODUCTION or secure with admin auth
+ */
+exports.debugTestToken = async (req, res) => {
+  try {
+    const info = mswipeService.getEnvironmentInfo();
+    
+    // Try to generate a token
+    const tokenResult = await mswipeService.generateToken();
+    
+    return res.status(200).json({
+      environment: info.environment,
+      baseUrl: info.baseUrl,
+      configured: info.configured,
+      tokenGeneration: {
+        success: tokenResult.success,
+        error: tokenResult.error || null,
+        hasToken: !!tokenResult.token,
+        // Don't expose actual token for security
+        tokenPreview: tokenResult.token ? `${tokenResult.token.substring(0, 20)}...` : null
+      },
+      configCheck: {
+        hasUserId: !!process.env.MSWIPE_USER_ID,
+        hasClientId: !!process.env.MSWIPE_CLIENT_ID,
+        hasPassword: !!process.env.MSWIPE_PASSWORD,
+        hasCustCode: !!process.env.MSWIPE_CUST_CODE,
+        hasRedirectUrl: !!process.env.MSWIPE_REDIRECT_URL
+      }
+    });
+  } catch (err) {
+    logger.error('Debug token test error', err);
+    return res.status(500).json({ 
+      error: 'Token test failed',
+      message: err.message 
+    });
+  }
+};

@@ -145,4 +145,15 @@ router.post('/verify/:donationRef', statusLimiter, mswipeController.verifyTransa
  */
 router.get('/info', mswipeController.getServiceInfo);
 
+/**
+ * GET /api/mswipe/debug/token
+ * Debug endpoint to test Mswipe token generation
+ * 
+ * Helps verify if credentials are configured correctly
+ * and if we can connect to Mswipe API
+ * 
+ * SECURITY: Remove or protect in production
+ */
+router.get('/debug/token', mswipeController.debugTestToken);
+
 module.exports = router;
