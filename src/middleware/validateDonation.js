@@ -25,10 +25,10 @@ module.exports = async function validateDonation(req, res, next) {
   try {
     const body = req.body;
     const errors = [];
-    // Required fields
+    // Required fields (transactionId removed - only required for manual donations)
     const requiredFields = [
       'fullName', 'email', 'phoneNumber', 'state', 'city', 'pinCode', 'address',
-      'seek80G', 'amount', 'transactionId', 'reasonForDonation'
+      'seek80G', 'amount', 'reasonForDonation'
     ];
     requiredFields.forEach(field => {
       if (!body[field] || (typeof body[field] === 'string' && !body[field].trim())) {
@@ -72,10 +72,21 @@ module.exports = async function validateDonation(req, res, next) {
         body[key] = sanitizeInput(body[key]);
       }
     });
-    // Transaction ID uniqueness
-    const existing = await Donation.findOne({ transactionId: body.transactionId });
-    if (existing) {
-      return res.status(409).json({ error: 'Duplicate transaction ID' });
+    // LEGACY: Transaction ID validation only for manual donations
+    const paymentGateway = body.paymentGateway || 'manual';
+    if (paymentGateway === 'manual') {
+      if (!body.transactionId || !body.transactionId.trim()) {
+        errors.push('transactionId is required for manual donations');
+      } else {
+        // Check uniqueness for manual donations
+        const existing = await Donation.findOne({ transactionId: body.transactionId });
+        if (existing) {
+          return res.status(409).json({ error: 'Duplicate transaction ID' });
+        }
+      }
+    }
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
     next();
   } catch (err) {

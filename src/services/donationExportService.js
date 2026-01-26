@@ -8,6 +8,10 @@ class DonationExportService {
       // Build query based on filters
       let query = {};
       
+      // IMPORTANT: Only export successful donations
+      // Exclude PENDING and FAILED payments
+      query.paymentStatus = 'SUCCESS';
+      
       // Date range filter
       if (filters.startDate || filters.endDate) {
         query.createdAt = {};
@@ -19,9 +23,17 @@ class DonationExportService {
         }
       }
       
-      // Status filter
+      // Status filter (legacy compatibility - map to paymentStatus)
       if (filters.status) {
-        query.status = filters.status;
+        // If legacy status filter is provided, respect it for backward compatibility
+        // but still ensure we only export successful payments
+        if (filters.status === 'completed' || filters.status === 'SUCCESS') {
+          query.paymentStatus = 'SUCCESS';
+        } else {
+          // For other statuses, maintain the paymentStatus = SUCCESS filter
+          // This ensures PENDING/FAILED donations are never exported
+          query.status = filters.status;
+        }
       }
       
       // Amount range filter
@@ -62,7 +74,10 @@ class DonationExportService {
         'Address': donation.address,
         'Seek 80G Certificate': donation.seek80G,
         'Amount (Rs.)': donation.amount,
-        'Transaction ID': donation.transactionId,
+        'Payment Gateway': donation.paymentGateway || 'manual',
+        'Payment Status': donation.paymentStatus || 'SUCCESS',
+        'Transaction ID': donation.transactionId || donation.mswipeTransactionRef || '',
+        'Mswipe Order ID': donation.mswipeOrderId || '',
         'Reason for Donation': donation.reasonForDonation,
         'Purpose': donation.purpose || '',
         'Status': donation.status,
@@ -99,7 +114,10 @@ class DonationExportService {
         'Address',
         'Seek 80G Certificate',
         'Amount (Rs.)',
+        'Payment Gateway',
+        'Payment Status',
         'Transaction ID',
+        'Mswipe Order ID',
         'Reason for Donation',
         'Purpose',
         'Status',
@@ -153,21 +171,35 @@ class DonationExportService {
             totalDonations: { $sum: 1 },
             totalAmount: { $sum: '$amount' },
             avgAmount: { $avg: '$amount' },
+            // Count by paymentStatus (new field)
             pendingCount: {
-              $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+              $sum: { $cond: [{ $eq: ['$paymentStatus', 'PENDING'] }, 1, 0] }
             },
-            completedCount: {
-              $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+            successCount: {
+              $sum: { $cond: [{ $eq: ['$paymentStatus', 'SUCCESS'] }, 1, 0] }
             },
             failedCount: {
+              $sum: { $cond: [{ $eq: ['$paymentStatus', 'FAILED'] }, 1, 0] }
+            },
+            // Legacy status counts for backward compatibility
+            legacyPendingCount: {
+              $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+            },
+            legacyCompletedCount: {
+              $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+            },
+            legacyFailedCount: {
               $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] }
             }
           }
         }
       ]);
       
-      // Get reason-wise breakdown
+      // Get reason-wise breakdown (only successful donations)
       const reasonStats = await Donation.aggregate([
+        {
+          $match: { paymentStatus: 'SUCCESS' }
+        },
         {
           $group: {
             _id: '$reasonForDonation',

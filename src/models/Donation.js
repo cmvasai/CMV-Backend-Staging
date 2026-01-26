@@ -12,21 +12,33 @@ const donationSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   seek80G: { type: String, required: true, enum: ['yes', 'no'] },
   amount: { type: Number, required: true, min: 1 },
-  transactionId: { type: String, required: true, unique: true, index: true },
+  // LEGACY: transactionId is now optional - only used for old manual donations
+  transactionId: { type: String, unique: true, sparse: true, index: true },
   reasonForDonation: { type: String, required: true, enum: [
     'Gurudakshina', 'General Donation', 'Event Sponsorship', 'Building Fund', 'Educational Support', 'Community Service', 'Special Occasion', 'Other'
   ] },
   purpose: { type: String },
   donationRef: { type: String, required: true, unique: true, index: true },
+  // LEGACY: status field kept for backward compatibility
   status: { type: String, default: 'pending', enum: ['pending', 'completed', 'failed'] },
+  // NEW: Payment gateway integration fields
+  paymentGateway: { type: String, enum: ['manual', 'mswipe'], default: 'mswipe' },
+  paymentStatus: { type: String, enum: ['PENDING', 'SUCCESS', 'FAILED'], default: 'PENDING' },
+  // Mswipe-specific fields
+  mswipeOrderId: { type: String, sparse: true, index: true },
+  mswipeTransactionRef: { type: String },     // RRN (Bank Reference Number) or IPG_ID
+  mswipeIpgId: { type: String },              // Mswipe's IPG transaction ID
+  mswipeTransId: { type: String },            // TransID from payment URL (for status checks)
+  mswipePaymentResponse: { type: mongoose.Schema.Types.Mixed },
   ipAddress: { type: String },
   userAgent: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
-donationSchema.index({ transactionId: 1 }, { unique: true });
-donationSchema.index({ donationRef: 1 }, { unique: true });
+// Note: transactionId unique sparse index is defined in schema field options
+// donationRef unique index is defined in schema field options
+// These explicit index() calls are redundant and removed to avoid conflicts
 
 donationSchema.pre('save', function(next) {
   this.updatedAt = new Date();
