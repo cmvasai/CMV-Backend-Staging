@@ -122,11 +122,13 @@ exports.initiatePayment = async (req, res) => {
       // Mark donation as failed
       donation.paymentStatus = 'FAILED';
       donation.status = 'failed';
+      donation.mswipePaymentResponse = { error: mswipeResult.error };
       await donation.save();
 
       logger.error(`Mswipe order creation failed for ${donationRef}: ${mswipeResult.error}`);
       return res.status(500).json({ 
         error: 'Failed to initiate payment',
+        details: process.env.NODE_ENV !== 'production' ? mswipeResult.error : undefined,
         donationRef // Return reference for support queries
       });
     }
@@ -146,11 +148,22 @@ exports.initiatePayment = async (req, res) => {
     });
 
   } catch (err) {
-    logger.error('Mswipe initiate payment error', err);
+    logger.error('Mswipe initiate payment error', {
+      message: err.message,
+      code: err.code,
+      keyPattern: err.keyPattern,
+      stack: err.stack
+    });
     
     // Handle duplicate donation reference (unlikely but possible)
     if (err.code === 11000) {
-      return res.status(409).json({ error: 'Duplicate order detected. Please try again.' });
+      // Log which field caused the duplicate
+      const duplicateField = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'unknown';
+      logger.error(`Duplicate key error on field: ${duplicateField}`);
+      return res.status(409).json({ 
+        error: 'A recent donation attempt was detected. Please wait 30 seconds and try again.',
+        field: duplicateField
+      });
     }
 
     return res.status(500).json({ error: 'Internal server error' });

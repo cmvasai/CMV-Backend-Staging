@@ -5,11 +5,13 @@ const rateLimit = require('express-rate-limit');
 
 /**
  * Rate limiter for payment initiation
- * Same limits as donation routes: 5 requests per 15 minutes
+ * Production: 5 requests per 15 minutes
+ * Development/Testing: 50 requests per 15 minutes
  */
+const isProduction = process.env.NODE_ENV === 'production';
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: isProduction ? 5 : 50, // More lenient in dev/staging
   message: 'Too many payment requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,

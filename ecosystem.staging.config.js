@@ -2,20 +2,26 @@ module.exports = {
   apps: [
     {
       name: 'cmv-staging-server',
-      script: 'server.js',
+      script: 'src/server.js',
       instances: 1, // Single instance for staging/testing
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'development',
-        PORT: 5002
+        PORT: 5002,
+        // 2Factor SMS OTP Service
+        TWOFACTOR_API_KEY: 'your-2factor-api-key-here'
       },
       env_staging: {
         NODE_ENV: 'staging',
-        PORT: 5002
+        PORT: 5002,
+        // 2Factor SMS OTP Service
+        TWOFACTOR_API_KEY: 'your-2factor-api-key-here'
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5002
+        PORT: 5002,
+        // 2Factor SMS OTP Service
+        TWOFACTOR_API_KEY: 'your-2factor-api-key-here'
       },
       watch: false,
       max_memory_restart: '512M', // Lower memory limit for staging

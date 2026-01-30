@@ -23,7 +23,9 @@ module.exports = {
       // Environment
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5001
+        PORT: 5001,
+        // 2Factor SMS OTP Service
+        TWOFACTOR_API_KEY: 'your-2factor-api-key-here'
       },
       
       // Memory & Restart Settings

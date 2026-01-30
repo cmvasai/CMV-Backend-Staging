@@ -10,6 +10,7 @@ const donationRoutes = require('./donation');
 const adminRoutes = require('./admin');
 const cgcc2025Routes = require('./cgcc2025Routes');
 const mswipeRoutes = require('./mswipeRoutes');
+const triviaRoutes = require('./triviaRoutes');
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use('/api/donations', donationRoutes);
 router.use('/api/mswipe', mswipeRoutes); // Mswipe payment gateway routes
 router.use('/api/admin', adminRoutes);
 router.use('/api/cgcc2025', cgcc2025Routes);
+router.use('/api/trivia', triviaRoutes); // Trivia quiz with SMS OTP
 
 module.exports = router;
